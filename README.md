@@ -117,7 +117,7 @@ Elastdocker differs from `deviantony/docker-elk` in the following points.
 
 1. Clone the Repository
      ```bash
-     git clone https://github.com/sherifabdlnaby/elastdocker.git
+     git clone https://github.com/m0nK3man/elastdocker.git
      ```
 2. Initialize Elasticsearch Keystore and TLS Self-Signed Certificates
     ```bash
