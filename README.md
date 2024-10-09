@@ -100,6 +100,19 @@ Elastdocker differs from `deviantony/docker-elk` in the following points.
 - [Docker-Compose 1.29 or higher](https://docs.docker.com/compose/install/)
 - 4GB RAM (For Windows and MacOS make sure Docker's VM has more than 4GB+ memory.)
 
+# Configuration
+
+* Some Configuration are parameterized in the `.env` file.
+  * `ELASTIC_PASSWORD`, user `elastic`'s password (default: `changeme` _pls_).
+  * `ELK_VERSION` Elastic Stack Version (default: `8.10.2`)
+  * `ELASTICSEARCH_HEAP`, how much Elasticsearch allocate from memory (default: 1GB -good for development only-)
+  * `LOGSTASH_HEAP`, how much Logstash allocate from memory.
+  * Other configurations which their such as cluster name, and node name, etc.
+* Elasticsearch Configuration in `elasticsearch.yml` at `./elasticsearch/config`.
+* Logstash Configuration in `logstash.yml` at `./logstash/config/logstash.yml`.
+* Logstash Pipeline in `main.conf` at `./logstash/pipeline/main.conf`.
+* Kibana Configuration in `kibana.yml` at `./kibana/config`.
+
 # Setup
 
 1. Clone the Repository
@@ -163,19 +176,6 @@ $ make prune
 
 </p>
 </details>
-
-# Configuration
-
-* Some Configuration are parameterized in the `.env` file.
-  * `ELASTIC_PASSWORD`, user `elastic`'s password (default: `changeme` _pls_).
-  * `ELK_VERSION` Elastic Stack Version (default: `8.10.2`)
-  * `ELASTICSEARCH_HEAP`, how much Elasticsearch allocate from memory (default: 1GB -good for development only-)
-  * `LOGSTASH_HEAP`, how much Logstash allocate from memory.
-  * Other configurations which their such as cluster name, and node name, etc.
-* Elasticsearch Configuration in `elasticsearch.yml` at `./elasticsearch/config`.
-* Logstash Configuration in `logstash.yml` at `./logstash/config/logstash.yml`.
-* Logstash Pipeline in `main.conf` at `./logstash/pipeline/main.conf`.
-* Kibana Configuration in `kibana.yml` at `./kibana/config`.
 
 ### Setting Up Keystore
 
