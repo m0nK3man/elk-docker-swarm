@@ -156,7 +156,7 @@ $ make collect-docker-logs
 ```
 $ make all
 ```
-#### To Start 2 Extra Elasticsearch nodes (recommended for experimenting only)
+#### To Start 2 Extra Elasticsearch nodes, 1 extra logstash node
 ```shell
 $ make nodes
 ```
