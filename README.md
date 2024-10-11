@@ -3,7 +3,7 @@
 </p>
 <h2 align="center"><b>Elast</b>ic Stack on <b>Docker</b></h2>
 <h3 align="center">Preconfigured Security, Tools, and Self-Monitoring</h3>
-<h4 align="center">Configured to be ready to be used for Log, Metrics, APM, Alerting, Machine Learning, and Security (SIEM) usecases.</h4>
+<h4 align="center">Configured to be ready to be used for Log, Metrics, Alerting, Machine Learning, and Security (SIEM) usecases.</h4>
 <p align="center">
    <a>
       <img src="https://img.shields.io/badge/Elastic%20Stack-8.10.2-blue?style=flat&logo=elasticsearch" alt="Elastic Stack Version 7^^">
@@ -41,12 +41,11 @@ Stack Version: [8.10.2](https://www.elastic.co/blog/whats-new-elastic-8-10-0) �
 
 ### Main Features 📜
 
-- Configured as a Production Single Node Cluster. (With a multi-node cluster option for experimenting).
+- Configured as a Production Single Node Cluster. (With docker swarm option).
 - Security Enabled By Default.
 - Configured to Enable:
   - Logging & Metrics Ingestion
     - Option to collect logs of all Docker Containers running on the host. via `make collect-docker-logs`.
-  - APM
   - Alerting
   - Machine Learning
   - Anomaly Detection
@@ -54,8 +53,6 @@ Stack Version: [8.10.2](https://www.elastic.co/blog/whats-new-elastic-8-10-0) �
   - Enabling Trial License
 - Use Docker-Compose and `.env` to configure your entire stack parameters.
 - Persist Elasticsearch's Keystore and SSL Certifications.
-- Self-Monitoring Metrics Enabled.
-- Prometheus Exporters for Stack Metrics.
 - Embedded Container Healthchecks for Stack Images.
 
 #### More points
@@ -82,10 +79,6 @@ Elastdocker differs from `deviantony/docker-elk` in the following points.
 - Add recommended environment configurations as Ulimits and Swap disable to the docker-compose.
 
 - Make it ready to be extended into a multinode cluster.
-
-- Configuring the Self-Monitoring and the Filebeat agent that ship ELK logs to ELK itself. (as a step to shipping it to a monitoring cluster in the future).
-
-- Configured Prometheus Exporters.
 
 - The Makefile that simplifies everything into some simple commands.
 
@@ -117,7 +110,7 @@ Elastdocker differs from `deviantony/docker-elk` in the following points.
 
 1. Clone the Repository
      ```bash
-     git clone https://github.com/m0nK3man/elastdocker.git
+     git clone https://github.com/m0nK3man/elk-docker-swarm.git
      ```
 2. Initialize Elasticsearch Keystore and TLS Self-Signed Certificates
     ```bash
@@ -137,33 +130,11 @@ Elastdocker differs from `deviantony/docker-elk` in the following points.
     
 > Whatever your Host (e.g AWS EC2, Azure, DigitalOcean, or on-premise server), once you expose your host to the network, ELK component will be accessible on their respective ports. Since the enabled TLS uses a self-signed certificate, it is recommended to SSL-Terminate public traffic using your signed certificates. 
 
-> 🏃🏻‍♂️ To start ingesting logs, you can start by running `make collect-docker-logs` which will collect your host's container logs.
-
 ## Additional Commands
 
 <details><summary>Expand</summary>
 <p>
 
-#### To Start Monitoring and Prometheus Exporters
-```shell
-$ make monitoring
-```
-#### To Ship Docker Container Logs to ELK 
-```shell
-$ make collect-docker-logs
-```
-#### To Start **Elastic Stack, Tools and Monitoring**
-```
-$ make all
-```
-#### To Start 2 Extra Elasticsearch nodes, 1 extra logstash node
-```shell
-$ make nodes
-```
-#### To Rebuild Images
-```shell
-$ make build
-```
 #### Bring down the stack.
 ```shell
 $ make down
@@ -213,54 +184,6 @@ make keystore
 ![Alerting](https://user-images.githubusercontent.com/16992394/156664848-d14f5e58-8f80-497d-a841-914c05a4b69c.png)
 ![Maps](https://user-images.githubusercontent.com/16992394/156664562-d38e11ee-b033-4b91-80bd-3a866ad65f56.png)
 ![ML](https://user-images.githubusercontent.com/16992394/156664695-5c1ed4a7-82f3-47a6-ab5c-b0ce41cc0fbe.png)
-
-# Working with Elastic APM
-
-After completing the setup step, you will notice a container named apm-server which gives you deeper visibility into your applications and can help you to identify and resolve root cause issues with correlated traces, logs, and metrics.
-
-## Authenticating with Elastic APM
-
-In order to authenticate with Elastic APM, you will need the following:
-
-- The value of `ELASTIC_APM_SECRET_TOKEN` defined in `.env` file as we have [secret token](https://www.elastic.co/guide/en/apm/guide/master/secret-token.html) enabled by default
-- The ability to reach port `8200`
-- Install elastic apm client in your application e.g. for NodeJS based applications you need to install [elastic-apm-node](https://www.elastic.co/guide/en/apm/agent/nodejs/master/typescript.html)
-- Import the package in your application and call the start function, In case of NodeJS based application you can do the following:
-
-```
-const apm = require('elastic-apm-node').start({
-  serviceName: 'foobar',
-  secretToken: process.env.ELASTIC_APM_SECRET_TOKEN,
-  
-  // https is enabled by default as per elastdocker configuration
-  serverUrl: 'https://localhost:8200',
-})
-```
-> Make sure that the agent is started before you require any other modules in your Node.js application - i.e. before express, http, etc. as mentioned in [Elastic APM Agent - NodeJS initialization](https://www.elastic.co/guide/en/apm/agent/nodejs/master/express.html#express-initialization)
-
-For more details or other languages you can check the following:
-- [APM Agents in different languages](https://www.elastic.co/guide/en/apm/agent/index.html)
-
-# Monitoring The Cluster
-
-### Via Self-Monitoring
-
-Head to Stack Monitoring tab in Kibana to see cluster metrics for all stack components.
-
-![Overview](https://user-images.githubusercontent.com/16992394/156664539-cc7e1a69-f1aa-4aca-93f6-7aedaabedd2c.png)
-![Moniroting](https://user-images.githubusercontent.com/16992394/156664647-78cfe2af-489d-4c35-8963-9b0a46904cf7.png)
-
-> In Production, cluster metrics should be shipped to another dedicated monitoring cluster.
-
-### Via Prometheus Exporters
-If you started Prometheus Exporters using `make monitoring` command. Prometheus Exporters will expose metrics at the following ports.
-
-| **Prometheus Exporter**      | **Port**     | **Recommended Grafana Dashboard**                                         |
-|--------------------------    |----------    |------------------------------------------------  |
-| `elasticsearch-exporter`     | `9114`       | [Elasticsearch by Kristian Jensen](https://grafana.com/grafana/dashboards/4358)                                                |
-| `logstash-exporter`          | `9304`       | [logstash-monitoring by dpavlos](https://github.com/dpavlos/logstash-monitoring)                                               |
-
-![Metrics](https://user-images.githubusercontent.com/16992394/78685076-89a58900-78f1-11ea-959b-ce374fe51500.jpg)
 
 # License
 [MIT License](https://raw.githubusercontent.com/sherifabdlnaby/elastdocker/master/LICENSE)
