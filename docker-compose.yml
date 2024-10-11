@@ -1,15 +1,5 @@
 version: '3.5'
 
-# To Join any other app setup using another network, change name and set external = true
-networks:
-  default:
-    name: elastic
-    external: false
-
-# will contain all elasticsearch data.
-volumes:
-  elasticsearch-data:
-
 secrets:
   elasticsearch.keystore:
     file: ./secrets/keystore/elasticsearch.keystore
@@ -25,18 +15,10 @@ secrets:
     file: ./secrets/certs/kibana/kibana.crt
   kibana.key:
     file: ./secrets/certs/kibana/kibana.key
-  apm-server.certificate:
-    file: ./secrets/certs/apm-server/apm-server.crt
-  apm-server.key:
-    file: ./secrets/certs/apm-server/apm-server.key
 
 services:
   elasticsearch:
-    image: elastdocker/elasticsearch:${ELK_VERSION}
-    build:
-      context: elasticsearch/
-      args:
-        ELK_VERSION: ${ELK_VERSION}
+    image: elasticsearch:${ELK_VERSION}
     restart: unless-stopped
     environment:
       ELASTIC_USERNAME: ${ELASTIC_USERNAME}
@@ -75,13 +57,13 @@ services:
         hard: 200000
     healthcheck:
       test: ["CMD", "sh", "-c", "curl -sf --insecure https://$ELASTIC_USERNAME:$ELASTIC_PASSWORD@localhost:$ELASTICSEARCH_PORT/_cat/health | grep -ioE 'green|yellow' || echo 'not green/yellow cluster status'"]
+    env_file:
+      - elastic.env
+    networks:
+      - elastic
 
   logstash:
-    image: elastdocker/logstash:${ELK_VERSION}
-    build:
-      context: logstash/
-      args:
-        ELK_VERSION: $ELK_VERSION
+    image: logstash:${ELK_VERSION}
     restart: unless-stopped
     volumes:
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
@@ -100,13 +82,13 @@ services:
       - "9600:9600"
     healthcheck:
       test: ["CMD", "curl", "-s" ,"-XGET", "http://127.0.0.1:9600"]
+    env_file:
+      - elastic.env
+    networks:
+      - elastic
 
   kibana:
-    image: elastdocker/kibana:${ELK_VERSION}
-    build:
-      context: kibana/
-      args:
-        ELK_VERSION: $ELK_VERSION
+    image: kibana:${ELK_VERSION}
     restart: unless-stopped
     volumes:
       - ./kibana/config/:/usr/share/kibana/config:ro
@@ -117,6 +99,7 @@ services:
       KIBANA_PORT: ${KIBANA_PORT}
     env_file:
       - ./secrets/.env.kibana.token
+      - elastic.env
     secrets:
       - source: elastic.ca
         target: /certs/ca.crt
@@ -126,27 +109,14 @@ services:
         target: /certs/kibana.key
     ports:
       - "${KIBANA_PORT}:${KIBANA_PORT}"
+    networks:
+      - elastic
 
-  apm-server:
-    image: elastdocker/apm-server:${ELK_VERSION}
-    build:
-      context: apm-server/
-      args:
-        ELK_VERSION: $ELK_VERSION
-    restart: unless-stopped
-    ports:
-      - "8200:8200"
-    volumes:
-      - ./apm-server/config/apm-server.yml:/usr/share/apm-server/apm-server.yml:ro
-    environment:
-      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
-      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
-      ELASTICSEARCH_HOST_PORT: https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}
-      ELASTIC_APM_SECRET_TOKEN: ${ELASTIC_APM_SECRET_TOKEN}
-    secrets:
-      - source: elastic.ca
-        target: /certs/ca.crt
-      - source: apm-server.certificate
-        target: /certs/apm-server.crt
-      - source: apm-server.key
-        target: /certs/apm-server.key
+# To Join any other app setup using another network, change name and set external = true
+networks:
+  elastic:
+    attachable: true
+    driver: overlay
+# will contain all elasticsearch data.
+volumes:
+  elasticsearch-data:
