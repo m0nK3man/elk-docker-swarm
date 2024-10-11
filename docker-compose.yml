@@ -58,7 +58,7 @@ services:
     healthcheck:
       test: ["CMD", "sh", "-c", "curl -sf --insecure https://$ELASTIC_USERNAME:$ELASTIC_PASSWORD@localhost:$ELASTICSEARCH_PORT/_cat/health | grep -ioE 'green|yellow' || echo 'not green/yellow cluster status'"]
     env_file:
-      - elastic.env
+      - .env
     networks:
       - elastic
 
@@ -83,7 +83,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-s" ,"-XGET", "http://127.0.0.1:9600"]
     env_file:
-      - elastic.env
+      - .env
     networks:
       - elastic
 
@@ -99,7 +99,7 @@ services:
       KIBANA_PORT: ${KIBANA_PORT}
     env_file:
       - ./secrets/.env.kibana.token
-      - elastic.env
+      - .env
     secrets:
       - source: elastic.ca
         target: /certs/ca.crt
