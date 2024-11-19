@@ -71,9 +71,9 @@ swarm-stop:     ## Stop all services in the ELK stack in Docker Swarm.
 
 swarm-restart:  ## Restart all services in the ELK stack in Docker Swarm.
 	@echo "Restarting services in the Swarm stack..."
-	docker service update --force $(SWARM_STACK_NAME)_elasticsearch
-	docker service update --force $(SWARM_STACK_NAME)_logstash
-	docker service update --force $(SWARM_STACK_NAME)_kibana
+	docker service update $(SWARM_STACK_NAME)_elasticsearch
+	docker service update $(SWARM_STACK_NAME)_logstash
+	docker service update $(SWARM_STACK_NAME)_kibana
 
 swarm-logs:     ## Tail logs for ELK services in Docker Swarm.
 	docker service logs --follow --tail=1000 $(SWARM_STACK_NAME)_elasticsearch
@@ -81,7 +81,7 @@ swarm-logs:     ## Tail logs for ELK services in Docker Swarm.
 	docker service logs --follow --tail=1000 $(SWARM_STACK_NAME)_kibana
 
 swarm-ps:       ## List all services in the ELK stack in Docker Swarm.
-	docker stack ps $(SWARM_STACK_NAME)
+	watch docker stack ps $(SWARM_STACK_NAME)
 
 
 # HELP

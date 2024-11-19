@@ -18,8 +18,7 @@ secrets:
 
 services:
   elasticsearch:
-    image: elasticsearch:${ELK_VERSION}
-    restart: unless-stopped
+    image: registry.bravoerp.vn/security/elasticsearch:${ELK_VERSION}
     environment:
       ELASTIC_USERNAME: ${ELASTIC_USERNAME}
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
@@ -31,9 +30,10 @@ services:
       ES_JAVA_OPTS: "-Xmx${ELASTICSEARCH_HEAP} -Xms${ELASTICSEARCH_HEAP} -Des.enforce.bootstrap.checks=true -Dlog4j2.formatMsgNoLookups=true"
       bootstrap.memory_lock: "true"
     volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
-      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-      - ./elasticsearch/config/log4j2.properties:/usr/share/elasticsearch/config/log4j2.properties
+      - /home/docker/data-elastic/elasticsearch/data:/usr/share/elasticsearch/data
+      - /home/docker/data-elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
     secrets:
       - source: elasticsearch.keystore
         target: /usr/share/elasticsearch/config/elasticsearch.keystore
@@ -61,14 +61,25 @@ services:
       - .env
     networks:
       - elastic
+    deploy:
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 16G
+      placement:
+        constraints:
+          - node.role == manager
 
   logstash:
-    image: logstash:${ELK_VERSION}
-    restart: unless-stopped
+    image: registry.bravoerp.vn/security/logstash:${ELK_VERSION}
     volumes:
-      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
-      - ./logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
-      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - /home/docker/data-elastic/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - /home/docker/data-elastic/logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
+      - /home/docker/data-elastic/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+
     secrets:
       - source: elastic.ca
         target: /certs/ca.crt
@@ -88,10 +99,12 @@ services:
       - elastic
 
   kibana:
-    image: kibana:${ELK_VERSION}
-    restart: unless-stopped
+    image: registry.bravoerp.vn/security/kibana:${ELK_VERSION}
+#    restart: unless-stopped
     volumes:
-      - ./kibana/config/:/usr/share/kibana/config:ro
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+      - /home/docker/data-elastic/kibana/config/:/usr/share/kibana/config:ro
     environment:
       ELASTIC_USERNAME: ${ELASTIC_USERNAME}
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
@@ -117,6 +130,3 @@ networks:
   elastic:
     attachable: true
     driver: overlay
-# will contain all elasticsearch data.
-volumes:
-  elasticsearch-data:
