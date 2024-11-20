@@ -30,7 +30,7 @@ services:
       ES_JAVA_OPTS: "-Xmx${ELASTICSEARCH_HEAP} -Xms${ELASTICSEARCH_HEAP} -Des.enforce.bootstrap.checks=true -Dlog4j2.formatMsgNoLookups=true"
       bootstrap.memory_lock: "true"
     volumes:
-      - /home/docker/data-elastic/elasticsearch/data:/usr/share/elasticsearch/data
+#      - /home/bravo/data-elastic/data:/usr/share/elasticsearch/data
       - /home/docker/data-elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
       - "/etc/localtime:/etc/localtime:ro"
       - "/etc/timezone:/etc/timezone:ro"
