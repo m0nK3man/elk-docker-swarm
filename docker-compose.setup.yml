@@ -2,7 +2,7 @@ version: '3.5'
 
 services:
   keystore:
-    image: elastdocker/elasticsearch:${ELK_VERSION}
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
     build:
       context: elasticsearch/
       args:
@@ -16,7 +16,7 @@ services:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
 
   certs:
-    image: elastdocker/elasticsearch:${ELK_VERSION}
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
     build:
       context: elasticsearch/
       args:

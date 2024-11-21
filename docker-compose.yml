@@ -15,10 +15,14 @@ secrets:
     file: ./secrets/certs/kibana/kibana.crt
   kibana.key:
     file: ./secrets/certs/kibana/kibana.key
+  apm-server.certificate:
+    file: ./secrets/certs/apm-server/apm-server.crt
+  apm-server.key:
+    file: ./secrets/certs/apm-server/apm-server.key
 
 services:
   elasticsearch:
-    image: registry.bravoerp.vn/security/elasticsearch:${ELK_VERSION}
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
     environment:
       ELASTIC_USERNAME: ${ELASTIC_USERNAME}
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
@@ -30,7 +34,7 @@ services:
       ES_JAVA_OPTS: "-Xmx${ELASTICSEARCH_HEAP} -Xms${ELASTICSEARCH_HEAP} -Des.enforce.bootstrap.checks=true -Dlog4j2.formatMsgNoLookups=true"
       bootstrap.memory_lock: "true"
     volumes:
-#      - /home/bravo/data-elastic/data:/usr/share/elasticsearch/data
+      - /home/docker/data-elastic/elasticsearch/data:/usr/share/elasticsearch/data
       - /home/docker/data-elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
       - "/etc/localtime:/etc/localtime:ro"
       - "/etc/timezone:/etc/timezone:ro"
@@ -72,7 +76,7 @@ services:
           - node.role == manager
 
   logstash:
-    image: registry.bravoerp.vn/security/logstash:${ELK_VERSION}
+    image: docker.elastic.co/logstash/logstash:8.9.0
     volumes:
       - /home/docker/data-elastic/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
       - /home/docker/data-elastic/logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
@@ -99,7 +103,7 @@ services:
       - elastic
 
   kibana:
-    image: registry.bravoerp.vn/security/kibana:${ELK_VERSION}
+    image: docker.elastic.co/kibana/kibana:8.9.0
 #    restart: unless-stopped
     volumes:
       - "/etc/localtime:/etc/localtime:ro"
@@ -122,6 +126,32 @@ services:
         target: /certs/kibana.key
     ports:
       - "${KIBANA_PORT}:${KIBANA_PORT}"
+    networks:
+      - elastic
+
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.9.0
+    build:
+      context: apm-server/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    restart: unless-stopped
+    ports:
+      - "8200:8200"
+    volumes:
+      - /home/docker/data-elastic/apm-server/config/apm-server.yml:/usr/share/apm-server/apm-server.yml:ro
+    environment:
+      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+      ELASTICSEARCH_HOST_PORT: https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}
+      ELASTIC_APM_SECRET_TOKEN: ${ELASTIC_APM_SECRET_TOKEN}
+    secrets:
+      - source: elastic.ca
+        target: /certs/ca.crt
+      - source: apm-server.certificate
+        target: /certs/apm-server.crt
+      - source: apm-server.key
+        target: /certs/apm-server.key
     networks:
       - elastic
 
