@@ -21,6 +21,8 @@ mkdir -p $OUTPUT_DIR/ca
 
 printf "Generating CA Certificates... \n"
 PASSWORD=`openssl rand -base64 32`
+echo "$PASSWORD" > $OUTPUT_DIR/ca_password.txt
+chmod 600 $OUTPUT_DIR/ca_password.txt
 /usr/share/elasticsearch/bin/elasticsearch-certutil ca --pass "$PASSWORD" --pem --out $ZIP_CA_FILE &> /dev/null
 printf "Generating Certificates... \n"
 unzip -qq $ZIP_CA_FILE -d $OUTPUT_DIR;

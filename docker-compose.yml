@@ -3,10 +3,6 @@ version: '3.5'
 secrets:
   elastic.ca:
     file: ./secrets/certs/ca/ca.crt
-  elasticsearch.certificate:
-    file: ./secrets/certs/elasticsearch/elasticsearch.crt
-  elasticsearch.key:
-    file: ./secrets/certs/elasticsearch/elasticsearch.key
   kibana.certificate:
     file: ./secrets/certs/kibana/kibana.crt
   kibana.key:
@@ -20,7 +16,7 @@ services:
     deploy:
       mode: global
     volumes:
-      - ./certs:/etc/nginx/certs
+      - ./secrets/certs:/etc/nginx/certs
     command: |
       /bin/sh -c "echo '
       user nobody nogroup;
@@ -35,13 +31,14 @@ services:
           listen *:9200 ssl;
           ssl_certificate /etc/nginx/certs/ca/ca.crt;
           ssl_certificate_key /etc/nginx/certs/ca/ca.key;
+          ssl_password_file /etc/nginx/certs/ca_password.txt;
           location / {
             proxy_set_header Connection keep-alive;
             set $$url https://es-cluster:9200;
             proxy_pass $$url;
-            proxy_set_header  Host $$http_host;
-            proxy_set_header  X-Real-IP $$remote_addr;
-            proxy_set_header  X-Forwarded-For $$proxy_add_x_forwarded_for;
+            proxy_set_header Host $$http_host;
+            proxy_set_header X-Real-IP $$remote_addr;
+            proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;
           }
         }
       }' | tee /etc/nginx/nginx.conf && nginx -t && nginx -g 'daemon off;'"
@@ -50,7 +47,7 @@ services:
     image: registry-git.bravoerp.vn/public/elasticsearch:${ELK_VERSION}
     volumes:
       - ./secrets/certs:/usr/share/elasticsearch/config/certs
-      - /home/docker/data-test/elasticsearch/data:/usr/share/elasticsearch/data
+      - /home/docker/data-test/es-data:/usr/share/elasticsearch/data
       - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
       - ./repo:/var/repo
       - "/etc/localtime:/etc/localtime:ro"
@@ -94,51 +91,51 @@ services:
         limits:
           memory: 16G
 
-  logstash:
-    image: registry.bravoerp.vn/security/docker.elastic.co/logstash/logstash:${ELK_VERSION}
-    volumes:
-      - /home/docker/data-elastic/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
-      - /home/docker/data-elastic/logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
-      - /home/docker/data-elastic/logstash/pipeline:/usr/share/logstash/pipeline:ro
-      - "/etc/localtime:/etc/localtime:ro"
-      - "/etc/timezone:/etc/timezone:ro"
-
-    secrets:
-      - source: elastic.ca
-        target: /certs/ca.crt
-    environment:
-      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
-      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
-      ELASTICSEARCH_HOST_PORT: https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}
-      LS_JAVA_OPTS: "-Xmx${LOGSTASH_HEAP} -Xms${LOGSTASH_HEAP} -Dlog4j2.formatMsgNoLookups=true"
-    ports:
-      - "5044:5044"
-      - "9600:9600"
-    healthcheck:
-      test: ["CMD", "curl", "-s" ,"-XGET", "http://127.0.0.1:9600"]
-    env_file:
-      - .env
-
-  kibana:
-    image: registry.bravoerp.vn/security/docker.elastic.co/kibana/kibana:${ELK_VERSION}
-    volumes:
-      - "/etc/localtime:/etc/localtime:ro"
-      - "/etc/timezone:/etc/timezone:ro"
-      - /home/docker/data-elastic/kibana/config/:/usr/share/kibana/config:ro
-    environment:
-      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
-      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
-      ELASTICSEARCH_HOST_PORT: https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}
-      KIBANA_PORT: ${KIBANA_PORT}
-    env_file:
-      - ./secrets/.env.kibana.token
-      - .env
-    secrets:
-      - source: elastic.ca
-        target: /certs/ca.crt
-      - source: kibana.certificate
-        target: /certs/kibana.crt
-      - source: kibana.key
-        target: /certs/kibana.key
-    ports:
-      - "${KIBANA_PORT}:${KIBANA_PORT}"
+#  logstash:
+#    image: registry.bravoerp.vn/security/docker.elastic.co/logstash/logstash:${ELK_VERSION}
+#    volumes:
+#      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+#      - ./logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
+#      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+#      - "/etc/localtime:/etc/localtime:ro"
+#      - "/etc/timezone:/etc/timezone:ro"
+#
+#    secrets:
+#      - source: elastic.ca
+#        target: /certs/ca.crt
+#    environment:
+#      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
+#      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+#      ELASTICSEARCH_HOST_PORT: https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}
+#      LS_JAVA_OPTS: "-Xmx${LOGSTASH_HEAP} -Xms${LOGSTASH_HEAP} -Dlog4j2.formatMsgNoLookups=true"
+#    ports:
+#      - "5044:5044"
+#      - "9600:9600"
+#    healthcheck:
+#      test: ["CMD", "curl", "-s" ,"-XGET", "http://127.0.0.1:9600"]
+#    env_file:
+#      - .env
+#
+#  kibana:
+#    image: registry.bravoerp.vn/security/docker.elastic.co/kibana/kibana:${ELK_VERSION}
+#    volumes:
+#      - "/etc/localtime:/etc/localtime:ro"
+#      - "/etc/timezone:/etc/timezone:ro"
+#      - /home/docker/data-test/kibana-config/:/usr/share/kibana/config:ro
+#    environment:
+#      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
+#      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+#      ELASTICSEARCH_HOST_PORT: https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}
+#      KIBANA_PORT: ${KIBANA_PORT}
+#    env_file:
+#      - ./secrets/.env.kibana.token
+#      - .env
+#    secrets:
+#      - source: elastic.ca
+#        target: /certs/ca.crt
+#      - source: kibana.certificate
+#        target: /certs/kibana.crt
+#      - source: kibana.key
+#        target: /certs/kibana.key
+#    ports:
+#      - "${KIBANA_PORT}:${KIBANA_PORT}"
