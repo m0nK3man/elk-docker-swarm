@@ -1,10 +1,6 @@
 version: '3.5'
 
 secrets:
-  elasticsearch.keystore:
-    file: ./secrets/keystore/elasticsearch.keystore
-  elasticsearch.service_tokens:
-    file: ./secrets/service_tokens
   elastic.ca:
     file: ./secrets/certs/ca/ca.crt
   elasticsearch.certificate:
@@ -15,65 +11,86 @@ secrets:
     file: ./secrets/certs/kibana/kibana.crt
   kibana.key:
     file: ./secrets/certs/kibana/kibana.key
-  apm-server.certificate:
-    file: ./secrets/certs/apm-server/apm-server.crt
-  apm-server.key:
-    file: ./secrets/certs/apm-server/apm-server.key
 
 services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
-    environment:
-      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
-      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
-      ELASTIC_CLUSTER_NAME: ${ELASTIC_CLUSTER_NAME}
-      ELASTIC_NODE_NAME: ${ELASTIC_NODE_NAME}
-      ELASTIC_INIT_MASTER_NODE: ${ELASTIC_INIT_MASTER_NODE}
-      ELASTIC_DISCOVERY_SEEDS: ${ELASTIC_DISCOVERY_SEEDS}
-      ELASTICSEARCH_PORT: ${ELASTICSEARCH_PORT}
-      ES_JAVA_OPTS: "-Xmx${ELASTICSEARCH_HEAP} -Xms${ELASTICSEARCH_HEAP} -Des.enforce.bootstrap.checks=true -Dlog4j2.formatMsgNoLookups=true"
-      bootstrap.memory_lock: "true"
-    volumes:
-      - /home/docker/data-elastic/elasticsearch/data:/usr/share/elasticsearch/data
-      - /home/docker/data-elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-      - "/etc/localtime:/etc/localtime:ro"
-      - "/etc/timezone:/etc/timezone:ro"
-    secrets:
-      - source: elasticsearch.keystore
-        target: /usr/share/elasticsearch/config/elasticsearch.keystore
-      - source: elasticsearch.service_tokens
-        target: /usr/share/elasticsearch/config/service_tokens
-      - source: elastic.ca
-        target: /usr/share/elasticsearch/config/certs/ca.crt
-      - source: elasticsearch.certificate
-        target: /usr/share/elasticsearch/config/certs/elasticsearch.crt
-      - source: elasticsearch.key
-        target: /usr/share/elasticsearch/config/certs/elasticsearch.key
+  nginx:
+    image: registry-git.bravoerp.vn/public/nginx:1.17.1-alpine
     ports:
-      - "${ELASTICSEARCH_PORT}:${ELASTICSEARCH_PORT}"
-      - "9300:9300"
+      - 9250:9200
+    deploy:
+      mode: global
+    volumes:
+      - ./certs:/etc/nginx/certs
+    command: |
+      /bin/sh -c "echo '
+      user nobody nogroup;
+      worker_processes auto;
+      events {
+        worker_connections 1024;
+      }
+      http {
+        client_max_body_size 4g;
+        resolver 127.0.0.11 ipv6=off;
+        server {
+          listen *:9200 ssl;
+          ssl_certificate /etc/nginx/certs/ca/ca.crt;
+          ssl_certificate_key /etc/nginx/certs/ca/ca.key;
+          location / {
+            proxy_set_header Connection keep-alive;
+            set $$url https://es-cluster:9200;
+            proxy_pass $$url;
+            proxy_set_header  Host $$http_host;
+            proxy_set_header  X-Real-IP $$remote_addr;
+            proxy_set_header  X-Forwarded-For $$proxy_add_x_forwarded_for;
+          }
+        }
+      }' | tee /etc/nginx/nginx.conf && nginx -t && nginx -g 'daemon off;'"
+
+  es-cluster:
+    image: registry-git.bravoerp.vn/public/elasticsearch:8.9.0
+    volumes:
+      - ./certs:/usr/share/elasticsearch/config/certs
+      - /home/docker/data-elastic/elasticsearch/data:/usr/share/elasticsearch/data
+      - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./repo:/var/repo
+    hostname: "{{.Node.Hostname}}"
+    environment:
+      - node.name="{{.Node.Hostname}}"
+      - cluster.name=docker-cluster
+      - cluster.initial_master_nodes=soc01,soc02,soc03
+      - discovery.seed_hosts=es-cluster
+      - ELASTIC_PASSWORD=85af32hydh85h4
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/{{.Node.Hostname}}/{{.Node.Hostname}}.key
+      - xpack.security.http.ssl.certificate=certs/{{.Node.Hostname}}/{{.Node.Hostname}}.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/{{.Node.Hostname}}/{{.Node.Hostname}}.key
+      - xpack.security.transport.ssl.certificate=certs/{{.Node.Hostname}}/{{.Node.Hostname}}.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.license.self_generated.type=basic
     ulimits:
       memlock:
         soft: -1
         hard: -1
-      nofile:
-        soft: 200000
-        hard: 200000
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -sf --insecure https://$ELASTIC_USERNAME:$ELASTIC_PASSWORD@localhost:$ELASTICSEARCH_PORT/_cat/health | grep -ioE 'green|yellow' || echo 'not green/yellow cluster status'"]
-    env_file:
-      - .env
-    networks:
-      - elastic
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
     deploy:
-      restart_policy:
-        condition: on-failure
+      mode: global
+      endpoint_mode: dnsrr
       resources:
         limits:
           memory: 16G
-      placement:
-        constraints:
-          - node.role == manager
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.9.0
@@ -99,8 +116,6 @@ services:
       test: ["CMD", "curl", "-s" ,"-XGET", "http://127.0.0.1:9600"]
     env_file:
       - .env
-    networks:
-      - elastic
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.9.0
@@ -126,37 +141,3 @@ services:
         target: /certs/kibana.key
     ports:
       - "${KIBANA_PORT}:${KIBANA_PORT}"
-    networks:
-      - elastic
-
-  apm-server:
-    image: docker.elastic.co/apm/apm-server:8.9.0
-    build:
-      context: apm-server/
-      args:
-        ELK_VERSION: $ELK_VERSION
-    restart: unless-stopped
-    ports:
-      - "8200:8200"
-    volumes:
-      - /home/docker/data-elastic/apm-server/config/apm-server.yml:/usr/share/apm-server/apm-server.yml:ro
-    environment:
-      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
-      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
-      ELASTICSEARCH_HOST_PORT: https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}
-      ELASTIC_APM_SECRET_TOKEN: ${ELASTIC_APM_SECRET_TOKEN}
-    secrets:
-      - source: elastic.ca
-        target: /certs/ca.crt
-      - source: apm-server.certificate
-        target: /certs/apm-server.crt
-      - source: apm-server.key
-        target: /certs/apm-server.key
-    networks:
-      - elastic
-
-# To Join any other app setup using another network, change name and set external = true
-networks:
-  elastic:
-    attachable: true
-    driver: overlay
