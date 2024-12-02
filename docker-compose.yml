@@ -49,8 +49,8 @@ services:
   es-cluster:
     image: registry-git.bravoerp.vn/public/elasticsearch:${ELK_VERSION}
     volumes:
-      - ./certs:/usr/share/elasticsearch/config/certs
-      - /home/docker/data-elastic/elasticsearch/data:/usr/share/elasticsearch/data
+      - ./secrets/certs:/usr/share/elasticsearch/config/certs
+      - /home/docker/data-test/elasticsearch/data:/usr/share/elasticsearch/data
       - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
       - ./repo:/var/repo
       - "/etc/localtime:/etc/localtime:ro"
