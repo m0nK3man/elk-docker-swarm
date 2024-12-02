@@ -116,26 +116,26 @@ services:
 #    env_file:
 #      - .env
 #
-#  kibana:
-#    image: registry.bravoerp.vn/security/docker.elastic.co/kibana/kibana:${ELK_VERSION}
-#    volumes:
-#      - "/etc/localtime:/etc/localtime:ro"
-#      - "/etc/timezone:/etc/timezone:ro"
-#      - /home/docker/data-test/kibana-config/:/usr/share/kibana/config:ro
-#    environment:
-#      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
-#      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
-#      ELASTICSEARCH_HOST_PORT: https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}
-#      KIBANA_PORT: ${KIBANA_PORT}
-#    env_file:
-#      - ./secrets/.env.kibana.token
-#      - .env
-#    secrets:
-#      - source: elastic.ca
-#        target: /certs/ca.crt
-#      - source: kibana.certificate
-#        target: /certs/kibana.crt
-#      - source: kibana.key
-#        target: /certs/kibana.key
-#    ports:
-#      - "${KIBANA_PORT}:${KIBANA_PORT}"
+  kibana:
+    image: registry.bravoerp.vn/security/docker.elastic.co/kibana/kibana:${ELK_VERSION}
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+      - ./kibana/config:/usr/share/kibana/config:ro
+    environment:
+      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+      ELASTICSEARCH_HOST_PORT: https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}
+      KIBANA_PORT: ${KIBANA_PORT}
+    env_file:
+      - ./secrets/.env.kibana.token
+      - .env
+    secrets:
+      - source: elastic.ca
+        target: /certs/ca.crt
+      - source: kibana.certificate
+        target: /certs/kibana.crt
+      - source: kibana.key
+        target: /certs/kibana.key
+    ports:
+      - "${KIBANA_PORT}:${KIBANA_PORT}"
