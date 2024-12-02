@@ -47,19 +47,21 @@ services:
       }' | tee /etc/nginx/nginx.conf && nginx -t && nginx -g 'daemon off;'"
 
   es-cluster:
-    image: registry-git.bravoerp.vn/public/elasticsearch:8.9.0
+    image: registry-git.bravoerp.vn/public/elasticsearch:${ELK_VERSION}
     volumes:
       - ./certs:/usr/share/elasticsearch/config/certs
       - /home/docker/data-elastic/elasticsearch/data:/usr/share/elasticsearch/data
       - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
       - ./repo:/var/repo
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
     hostname: "{{.Node.Hostname}}"
     environment:
       - node.name="{{.Node.Hostname}}"
       - cluster.name=docker-cluster
       - cluster.initial_master_nodes=soc01,soc02,soc03
       - discovery.seed_hosts=es-cluster
-      - ELASTIC_PASSWORD=85af32hydh85h4
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - bootstrap.memory_lock=true
       - xpack.security.enabled=true
       - xpack.security.http.ssl.enabled=true
@@ -93,7 +95,7 @@ services:
           memory: 16G
 
   logstash:
-    image: docker.elastic.co/logstash/logstash:8.9.0
+    image: registry.bravoerp.vn/security/docker.elastic.co/logstash/logstash:${ELK_VERSION}
     volumes:
       - /home/docker/data-elastic/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
       - /home/docker/data-elastic/logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
@@ -118,8 +120,7 @@ services:
       - .env
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.9.0
-#    restart: unless-stopped
+    image: registry.bravoerp.vn/security/docker.elastic.co/kibana/kibana:${ELK_VERSION}
     volumes:
       - "/etc/localtime:/etc/localtime:ro"
       - "/etc/timezone:/etc/timezone:ro"
